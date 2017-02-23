@@ -55,6 +55,13 @@ class Game {
 
     void add_score(int score);
     void destroy_ship();
+
+    eGameMode mMode;
+    int mCursor;
+
+    void draw_logo(int frame);
+    void draw_title(int frame);
+    void draw_stage(int frame);
 };
 
 #endif // !_GAME_H

@@ -449,6 +449,9 @@ int Convoy::defeat_alien(Position *missile)
   int mis_x = missile->get_x();
   int mis_y = missile->get_y();
 
+  int dx, dy;
+  bool hit;
+
   row = (mis_y - y) / 5;
   col = (mis_x - x) / 6;
 
@@ -456,9 +459,25 @@ int Convoy::defeat_alien(Position *missile)
   chk_x = x + col * 6 + 2;
 
   // -------------------------------------------------- Check Convoy Aliens ---
-  if (row >= 0 && col >= 0 && row < CONVOY_ROWS && col < CONVOY_COLS
-      && mis_x == chk_x && (mis_y == chk_y || (mis_y + 1) == chk_y)) {
-    if (convoy[row][col] >= BOSS_ALIEN && convoy[row][col] <= GREEN_ALIEN) {
+  if (row >= 0 && col >= 0 && row < CONVOY_ROWS && col < CONVOY_COLS) {
+    hit = false;
+    switch (mGame.mMode) {
+    case GAME_MODE_PRACTICE:
+      dx = chk_x - mis_x;
+      dy = chk_y - mis_y;
+      if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) {
+	hit = true;
+      }
+      break;
+    case GAME_MODE_NORMAL:
+      if (mis_x == chk_x && (mis_y == chk_y || (mis_y + 1) == chk_y)) {
+	hit = true;
+      }
+      break;
+    }
+
+    if (hit
+	&& convoy[row][col] >= BOSS_ALIEN && convoy[row][col] <= GREEN_ALIEN) {
       const int convoy_score[4] = { 6, 5, 4, 3 };
       score = convoy_score[convoy[row][col]];
 
@@ -481,8 +500,23 @@ int Convoy::defeat_alien(Position *missile)
       chk_x = enemy[idx]->pos.get_x() + 1;
       chk_y = enemy[idx]->pos.get_y() + 1;
 
-      if ((mis_x - chk_x) >= 0 && (mis_x - chk_x) <=2
-	  && (mis_y - chk_y) >= 0 && (mis_y - chk_y) <= 2) {
+      hit = false;
+      switch (mGame.mMode) {
+      case GAME_MODE_PRACTICE:
+	if ((mis_x - chk_x) >= -1 && (mis_x - chk_x) <=3
+	    && (mis_y - chk_y) >= -1 && (mis_y - chk_y) <= 3) {
+	  hit = true;
+	}
+	break;
+      case GAME_MODE_NORMAL:
+	if ((mis_x - chk_x) >= 0 && (mis_x - chk_x) <=2
+	    && (mis_y - chk_y) >= 0 && (mis_y - chk_y) <= 2) {
+	  hit = true;
+	}
+	break;
+      }
+
+      if (hit) {
 	score = enemy[idx]->score;
 
 	if (exp != NULL) delete exp;

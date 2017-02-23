@@ -12,13 +12,6 @@ extern Game mGame;
 #include "sound.h"
 
 //=============================================================================
-static void draw_logo(int frame);
-static void draw_title(int frame);
-
-static void draw_stage(int frame);
-
-
-//=============================================================================
 struct {
   int8_t speed;
   int8_t x;
@@ -33,6 +26,9 @@ Game::Game()
 
   mHighScore = 0;
   mScore = 0;
+
+  mMode = GAME_MODE_NORMAL;
+  mCursor = 0;
 }
 
 //=============================================================================
@@ -115,13 +111,31 @@ void Game::check_input()
   switch (mState) {
   case GAME_ST_TITLE:
     if (mArduboy.pressed(LEFT_BUTTON)) {
-      if (mArduboy.audio.enabled()) {
-	mArduboy.audio.off();
+      switch (mCursor) {
+      case 0:
+	mMode = GAME_MODE_PRACTICE;
+	break;
+      case 1:
+	if (mArduboy.audio.enabled()) {
+	  mArduboy.audio.off();
+	}
+	break;
       }
     } else if (mArduboy.pressed(RIGHT_BUTTON)) {
-      if (!mArduboy.audio.enabled()) {
-	mArduboy.audio.on();
+      switch (mCursor) {
+      case 0:
+	mMode = GAME_MODE_NORMAL;
+	break;
+      case 1:
+	if (!mArduboy.audio.enabled()) {
+	  mArduboy.audio.on();
+	}
+	break;
       }
+    } else if (mCursor > 0 && mArduboy.pressed(UP_BUTTON)) {
+      mCursor --;
+    } else if (mCursor < 1 && mArduboy.pressed(DOWN_BUTTON)) {
+      mCursor ++;
     }
 
   case GAME_ST_GAMEOVER:
@@ -261,7 +275,7 @@ void Game::draw()
     mArduboy.setCursor(64 - 6, 48);
     mArduboy.print("0 pts");
     int x = 64 - 12;
-    for (int score = mGame.mScore; score > 0; score /= 10, x -= 6) {
+    for (int score = mScore; score > 0; score /= 10, x -= 6) {
       mArduboy.setCursor(x, 48);
       mArduboy.write('0' + (score % 10));
     }
@@ -331,7 +345,7 @@ static void draw_remain(int x, int y)
 }
 
 //=============================================================================
-static void draw_logo(int frame)
+void Game::draw_logo(int frame)
 {
   int y;
   int x = 44;
@@ -351,13 +365,33 @@ static void draw_logo(int frame)
   }
 }
 //=============================================================================
-static void draw_title(int frame)
+void Game::draw_title(int frame)
 {
-  mArduboy.drawBitmap(32, 6, title_bmp, 64, 16, WHITE);
+  int x, y;
 
-  int x = (128-54)/2-8;
-  int y = 32;
-  mArduboy.setCursor(x + 8, y);
+  mArduboy.drawBitmap(32, 2, title_bmp, 64, 16, WHITE);
+
+  x = (128-54)/2-8;
+
+  // ----------------------------------------------------- Select Game Mode ---
+  y = 26;
+  if (mCursor == 0) {
+    mArduboy.fillTriangle(x+3, y, x, y+3, x+3, y+6, WHITE);
+    mArduboy.fillTriangle(x+65, y, x+65+3, y+3, x+65, y+6, WHITE);
+  }
+  mArduboy.setCursor(x + 8 + 3, y);
+  switch (mMode) {
+  case GAME_MODE_PRACTICE:
+    mArduboy.print("PRACTICE");
+    break;
+  case GAME_MODE_NORMAL:
+    mArduboy.print(" NORMAL ");
+    break;
+  }
+
+  // -------------------------------------------------- Select Sound On/Off ---
+  y = 38;
+#if 0
   if (mArduboy.audio.enabled()) {
     mArduboy.fillTriangle(x+3, y, x, y+3, x+3, y+6, WHITE);
     mArduboy.drawTriangle(x+65, y, x+65+3, y+3, x+65, y+6, WHITE);
@@ -367,15 +401,27 @@ static void draw_title(int frame)
     mArduboy.fillTriangle(x+65, y, x+65+3, y+3, x+65, y+6, WHITE);
     mArduboy.print("SOUND:OFF");
   }
+#else
+  if (mCursor == 1) {
+    mArduboy.fillTriangle(x+3, y, x, y+3, x+3, y+6, WHITE);
+    mArduboy.fillTriangle(x+65, y, x+65+3, y+3, x+65, y+6, WHITE);
+  }
+  mArduboy.setCursor(x + 8, y);
+  if (mArduboy.audio.enabled()) {
+    mArduboy.print("SOUND: ON");
+  } else {
+    mArduboy.print("SOUND:OFF");
+  }
+#endif
 
   x = (128-6*13)/2;
-  y = 46;
+  y = 54;
   mArduboy.setCursor(x, y);
   mArduboy.print("PUSH A BUTTON");
 }
 
 //=============================================================================
-static void draw_stage(int frame)
+void Game::draw_stage(int frame)
 {
   // ------------------------------------------------------------- Clipping ---
   mArduboy.fillRect(14, 0, 6, 64, BLACK);
@@ -383,24 +429,24 @@ static void draw_stage(int frame)
 
   // ------------------------------------------------------ Draw High Score ---
   mArduboy.drawBitmap(128-18, 0, label_bmp[1], 18, 8, WHITE);
-  draw_score(128, 8, mGame.mHighScore);
+  draw_score(128, 8, mHighScore);
 
   // ------------------------------------------------ Draw Player One Score ---
   mArduboy.drawBitmap(128-18, 16, label_bmp[0], 18, 8, WHITE);
-  draw_score(128, 16+8, mGame.mScore);
+  draw_score(128, 16+8, mScore);
 
   // -------------------------------------------------- Draw Remained Ships ---
-  for (int num = 0; num < mGame.mNumShips; num ++) {
+  for (int num = 0; num < mNumShips; num ++) {
     draw_remain(num * 4, 64 - 5);
   }
 
   // ------------------------------------------------------- Draw Stage No. ---
-  if (mGame.mStageNo <= 25) {
-    for (int num = 0; num < mGame.mStageNo; num ++) {
+  if (mStageNo <= 25) {
+    for (int num = 0; num < mStageNo; num ++) {
       draw_flag(128 - 2 - (num % 5) * 3, 64 - 4 - (num / 5) * 5);
     }
   } else {
-    int x = draw_number(128, 64 - 5, mGame.mStageNo);
+    int x = draw_number(128, 64 - 5, mStageNo);
     draw_flag(x - 4, 64 - 4);
   }
 
@@ -418,6 +464,12 @@ static void draw_stage(int frame)
       star[idx].y = 0;
       star[idx].speed = random(0, 4) + 2;
     }
+  }
+
+  // ------------------------------------------------------- Draw Game Mode ---
+  if (mMode == GAME_MODE_PRACTICE) {
+    mArduboy.setCursor(0, 0);
+    mArduboy.print("P");
   }
 }
 

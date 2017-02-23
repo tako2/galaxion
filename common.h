@@ -16,6 +16,12 @@
 #define POS_SCALE (256)
 
 //=============================================================================
+typedef enum {
+    GAME_MODE_PRACTICE,
+    GAME_MODE_NORMAL
+} eGameMode;
+
+//=============================================================================
 class Position {
  public:
     int x;
